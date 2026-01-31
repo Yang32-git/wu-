@@ -47,58 +47,54 @@
 1. 克隆或下载项目
 ```bash
 git clone <repository-url>
-cd 信息收集一条龙
 ```
 
 2. 安装依赖
 ```bash
+cd 信息收集一条龙
 pip install -r requirements.txt
 ```
 
-3. 安装可选依赖（用于PDF报告）
+3. 运行工具
 ```bash
-pip install weasyprint
+# 命令行模式
+python main.py -t example.com -m all
+
+# GUI模式
+python tkinter_gui.py
 ```
 
-## 使用方法
+## 使用说明
 
-### 命令行使用
+### 命令行模式
 
-#### 基本扫描
+#### 基本用法
+
 ```bash
-# 扫描单个目标的所有模块
-python main.py -t example.com
+# 扫描单个目标
+python main.py -t example.com -m all
 
-# 扫描多个模块
+# 指定模块扫描
 python main.py -t example.com -m subdomain,port,dns
 
-# 指定线程数和超时时间
-python main.py -t example.com --threads 50 --timeout 10
-```
-
-#### 高级扫描
-```bash
-# 从文件读取目标列表
+# 批量扫描
 python main.py -f targets.txt -m all -o report.html
-
-# 使用自定义字典
-python main.py -t example.com -m subdomain --wordlist my_subdomains.txt
-
-# 扫描特定端口范围
-python main.py -t example.com -m port --wordlist "1-1000"
-```
-
-#### 生成报告
-```bash
-# 生成HTML报告
-python main.py -t example.com -m all -o report.html
-
-# 生成PDF报告（需要安装weasyprint）
-python main.py -t example.com -m all -o report.pdf
 
 # 生成JSON报告
 python main.py -t example.com -m all -o report.json
 ```
+
+#### 参数说明
+
+- `-t, --target`: 目标域名或IP地址
+- `-f, --file`: 从文件读取目标列表
+- `-m, --modules`: 启用的模块（subdomain,port,service,dns,whois,dir,vuln,ssl,network,all）
+- `--threads`: 线程数（默认：30）
+- `--timeout`: 超时时间（默认：5秒）
+- `-o, --output`: 输出报告文件
+- `-v, --verbose`: 详细输出
+- `--api`: 启动API服务器模式
+- `--api-port`: API服务器端口（默认：8000）
 
 ### 模块说明
 
@@ -198,142 +194,172 @@ response = requests.post('http://localhost:8080/api/v1/scan', json={
     'timeout': 5
 })
 
-task = response.json()
-task_id = task['task_id']
+task_id = response.json()['task_id']
+print(f"任务已创建: {task_id}")
 
 # 查询任务状态
 while True:
-    response = requests.get(f'http://localhost:8080/api/v1/scan/{task_id}')
-    task = response.json()
-    
-    if task['status'] in ['completed', 'failed']:
+    result = requests.get(f'http://localhost:8080/api/v1/scan/{task_id}').json()
+    if result['status'] == 'completed':
+        print("扫描完成！")
+        print(result['results'])
         break
-    
-    print(f"Status: {task['status']}")
-    time.sleep(2)
-
-# 获取结果
-print(json.dumps(task['result'], indent=2))
+    elif result['status'] == 'failed':
+        print("扫描失败！")
+        break
+    else:
+        print(f"进度: {result['progress']}%")
+        time.sleep(2)
 ```
 
-## 配置文件
+### GUI vs 命令行对比
 
-工具使用`config.yaml`进行配置，主要配置项包括：
+| 特性 | GUI模式 | 命令行模式 |
+|------|---------|------------|
+| 易用性 | ⭐⭐⭐⭐⭐ 图形操作 | ⭐⭐⭐ 需要记忆命令 |
+| 实时性 | ⭐⭐⭐⭐⭐ 实时显示 | ⭐⭐⭐ 定期刷新 |
+| 交互性 | ⭐⭐⭐⭐⭐ 交互式 | ⭐⭐ 批处理 |
+| 可视化 | ⭐⭐⭐⭐⭐ 图表展示 | ⭐⭐ 文本输出 |
+| 跨平台 | ⭐⭐⭐⭐⭐ 原生应用 | ⭐⭐⭐⭐ Python脚本 |
+| 批量操作 | ⭐⭐⭐⭐ 列表输入 | ⭐⭐⭐⭐ 文件输入 |
+| 报告生成 | ⭐⭐⭐⭐ 一键生成 | ⭐⭐⭐ 命令生成 |
+
+## 配置说明
+
+### 配置文件
+
+编辑 `config.yaml` 文件来自定义工具行为：
 
 ```yaml
-scan:
-  default_threads: 30      # 默认线程数
-  default_timeout: 5       # 默认超时时间（秒）
-  max_threads: 200         # 最大线程数
-
-subdomain:
-  brute_force: true        # 启用暴力破解
-  search_engines: true     # 启用搜索引擎搜索
-  dns_servers:             # DNS服务器列表
-    - 8.8.8.8
-    - 1.1.1.1
-
-port:
-  top_ports: [21,22,23,25,53,80,443,8080]  # 常用端口
-
-vulnerability:
-  test_xss: true           # 测试XSS漏洞
-  test_sqli: true          # 测试SQL注入
-  test_command_injection: false  # 测试命令注入
-
-api:
-  enabled: true
-  host: "0.0.0.0"
-  port: 8000
-  cors_enabled: true       # 启用CORS
+# 扫描配置
+scanning:
+  threads: 30                    # 默认线程数
+  timeout: 5                     # 默认超时时间（秒）
+  wordlist_dir: "data"          # 字典文件目录
+  
+# 模块配置
+modules:
+  subdomain:
+    enabled: true
+    wordlist: "subdomains.txt"   # 子域名字典
+    use_search_engines: true     # 使用搜索引擎
+    use_cert_transparency: true  # 使用证书透明度
+    
+  port:
+    enabled: true
+    ports: "1-1000"              # 扫描端口范围
+    top_ports: 1000              # 常用端口数
+    
+  # 更多配置...
 ```
 
-## 输出示例
+### 自定义字典
 
-### HTML报告
+- 子域名字典：`data/subdomains.txt`
+- 目录字典：`data/directory.txt`
 
-HTML报告包含：
-- 执行摘要
-- 目标概览
-- 详细扫描结果
-- 漏洞和警告信息
-- 风险等级评估
+## 示例
 
-### JSON输出
+### 示例1：基础信息收集
 
-```json
-{
-  "metadata": {
-    "generated_at": "2024-01-31T12:00:00",
-    "tool_name": "网络安全信息收集工具",
-    "version": "1.0.0"
-  },
-  "summary": {
-    "total_targets": 1,
-    "total_vulnerabilities": 3,
-    "risk_level": "medium"
-  },
-  "targets": [
-    {
-      "target": "example.com",
-      "risk_level": "medium",
-      "results": {
-        "subdomain": {
-          "subdomains": ["www.example.com", "api.example.com"],
-          "total_found": 2
-        },
-        "port": {
-          "open_ports": [
-            {"port": 80, "service": "HTTP", "state": "open"},
-            {"port": 443, "service": "HTTPS", "state": "open"}
-          ],
-          "open_count": 2
-        }
-      }
-    }
-  ]
-}
+```bash
+python main.py -t example.com -m subdomain,dns,whois -o basic_info.html
+```
+
+### 示例2：安全评估
+
+```bash
+python main.py -t example.com -m port,service,vuln,ssl -o security_assessment.html
+```
+
+### 示例3：网络探测
+
+```bash
+python main.py -t 192.168.1.0/24 -m port,service,network -o network_discovery.html
+```
+
+### 示例4：批量扫描
+
+```bash
+# targets.txt 内容：
+# example1.com
+# example2.com
+# 192.168.1.1
+
+python main.py -f targets.txt -m all -o batch_report.html
 ```
 
 ## 注意事项
 
 ### 法律声明
 
-本工具仅供教育和授权测试使用。使用本工具扫描目标前，请确保您已获得适当的授权。未经授权的网络扫描可能违反法律法规。
+本工具仅用于合法的安全测试和教育目的。使用本工具扫描目标前，请确保你已获得适当的授权。未经授权的扫描可能违反法律法规。
 
-### 性能考虑
+### 性能建议
 
-- 大规模扫描时，建议使用较低的线程数以避免对目标造成过大压力
-- 某些功能（如PDF生成）需要额外的系统依赖
-- 网络扫描可能需要管理员权限
+1. **线程数设置**：
+   - 内网扫描：可设置较高（100-200）
+   - 公网扫描：建议较低（10-30）
+   - 默认：30
 
-### 故障排除
+2. **超时时间**：
+   - 稳定网络：5秒
+   - 不稳定网络：10-15秒
 
-1. **端口扫描失败**
-   - 检查是否需要管理员权限
-   - 确认防火墙设置
+3. **扫描策略**：
+   - 大范围扫描：先使用 `-m port` 快速探测
+   - 针对性扫描：使用特定模块组合
+   - 全面评估：使用 `-m all`
 
-2. **SSL证书分析失败**
-   - 检查目标是否支持HTTPS
-   - 确认端口是否正确
+### 常见问题
 
-3. **PDF报告生成失败**
-   - 确认weasyprint已安装
-   - 检查系统字体配置
+#### 1. 导入错误
+```
+ImportError: No module named 'xxx'
+```
+解决方案：
+```bash
+pip install -r requirements.txt
+```
 
-## 贡献
+#### 2. 权限问题
+```
+PermissionError: [Errno 13] Permission denied
+```
+解决方案：
+- 以管理员身份运行
+- 检查文件和目录权限
 
-欢迎提交Issue和Pull Request来改进这个工具。
-
-## 许可证
-
-本项目采用MIT许可证 - 详见LICENSE文件。
+#### 3. 扫描超时
+```
+TimeoutError: [WinError 10060]
+```
+解决方案：
+- 增加超时时间：`--timeout 10`
+- 检查网络连接
+- 减少线程数
 
 ## 更新日志
 
 ### v1.0.0 (2024-01-31)
 - 初始版本发布
-- 实现所有核心功能模块
-- 支持HTML/PDF/JSON报告生成
-- 提供API接口
-- 支持多线程扫描
+- 支持10个功能模块
+- 支持命令行和GUI模式
+- 支持报告生成功能
+
+## 贡献
+
+欢迎提交Issue和Pull Request！
+
+## 许可证
+
+MIT License
+
+## 联系方式
+
+- 项目地址: https://github.com/Yang32-git/wu-
+- 问题反馈: https://github.com/Yang32-git/wu-/issues
+
+## 致谢
+
+感谢所有开源社区的支持和贡献！

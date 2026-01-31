@@ -1,0 +1,485 @@
+# 网络安全信息收集工具 - 使用示例
+
+## 基本用法
+
+### 1. 扫描单个目标
+
+# 扫描所有模块
+python main.py -t example.com -m all
+
+# 扫描特定模块
+python main.py -t example.com -m subdomain,port,dns
+
+# 指定线程数和超时时间
+python main.py -t example.com -m port --threads 50 --timeout 10
+
+# 生成HTML报告
+python main.py -t example.com -m all -o report.html
+
+# 生成JSON报告
+python main.py -t example.com -m all -o report.json
+
+
+### 2. 扫描多个目标
+
+# 从文件读取目标列表
+python main.py -f targets.txt -m all -o batch_report.html
+
+# targets.txt 格式（每行一个目标）
+# example1.com
+# example2.com
+# 192.168.1.1
+# 192.168.1.0/24
+
+
+### 3. 使用自定义字典
+
+# 子域名扫描使用自定义字典
+python main.py -t example.com -m subdomain --wordlist my_subdomains.txt
+
+# 目录扫描使用自定义字典
+python main.py -t example.com -m dir --wordlist my_directories.txt
+
+# 端口扫描指定范围
+python main.py -t example.com -m port --wordlist "1-1000"
+python main.py -t example.com -m port --wordlist "80,443,8080,8443"
+
+
+### 4. 详细控制选项
+
+# 详细输出模式
+python main.py -t example.com -m all -v
+
+# 指定配置文件
+python main.py -t example.com -m all --config custom_config.yaml
+
+# 控制日志级别
+python main.py -t example.com -m all -v --log-level DEBUG
+
+
+### 5. API模式使用
+
+# 启动API服务器
+python main.py --api --port 8080
+
+# API使用示例 (Python)
+```python
+import requests
+import time
+
+# 创建扫描任务
+response = requests.post('http://localhost:8080/api/v1/scan', json={
+    'target': 'example.com',
+    'modules': ['subdomain', 'port', 'vuln'],
+    'threads': 30,
+    'timeout': 5
+})
+
+task = response.json()
+print(f"任务ID: {task['task_id']}")
+
+# 查询任务状态
+while True:
+    response = requests.get(f"http://localhost:8080/api/v1/scan/{task['task_id']}")
+    task_info = response.json()
+    
+    print(f"状态: {task_info['status']}")
+    
+    if task_info['status'] in ['completed', 'failed']:
+        break
+    
+    time.sleep(2)
+
+# 打印结果
+if task_info['status'] == 'completed':
+    import json
+    print(json.dumps(task_info['result'], indent=2))
+```
+
+
+## 模块详解
+
+### 子域名扫描 (subdomain)
+- DNS区域传输（如果允许）
+- 搜索引擎发现（crt.sh、CertSpotter等）
+- 字典暴力破解
+- 支持自定义DNS服务器
+
+### 端口扫描 (port)
+- TCP端口扫描
+- SYN扫描（需要管理员权限）
+- Banner抓取
+- 服务版本识别
+
+### 服务识别 (service)
+- 基于Banner的服务识别
+- 版本信息提取
+- CPE（通用平台枚举）生成
+- 操作系统指纹识别
+
+### DNS记录 (dns)
+- 支持A、AAAA、MX、NS、TXT、CNAME、SOA、PTR等记录类型
+- DNS服务器配置
+- 区域传输尝试
+
+### WHOIS查询 (whois)
+- 域名注册信息
+- 注册商信息
+- 创建/过期日期
+- 名称服务器
+
+### 目录扫描 (dir)
+- 网站目录枚举
+- 文件发现
+- 状态码分析
+- 目录列表检测
+
+### 漏洞检测 (vuln)
+- XSS漏洞检测
+- SQL注入检测
+- 命令注入检测
+- 安全头检查
+- SSL/TLS配置检查
+- 信息泄露检测
+
+### SSL分析 (ssl)
+- 证书有效性检查
+- 过期时间监控
+- 证书链验证
+- 加密套件分析
+- 协议版本检测
+
+### 网络拓扑 (network)
+- 路由追踪（traceroute）
+- 网络信息收集
+- 操作系统TTL指纹
+
+
+## 实际应用场景
+
+### 场景1: 网站安全评估
+```bash
+# 对目标网站进行全面的安全评估
+python main.py -t target.com -m all -o security_audit.html
+
+# 重点关注漏洞和SSL配置
+python main.py -t target.com -m vuln,ssl -o vuln_report.html
+```
+
+### 场景2: 子域名收集
+```bash
+# 全面的子域名收集
+python main.py -t target.com -m subdomain --threads 100 -o subdomains.html
+
+# 结合暴力破解和搜索引擎
+# 配置文件设置: subdomain.brute_force=true, subdomain.search_engines=true
+```
+
+### 场景3: 网络资产发现
+```bash
+# 扫描内网资产
+python main.py -t 192.168.1.0/24 -m port,service -o network_assets.html
+
+# 扫描特定端口范围
+python main.py -t 192.168.1.0/24 -m port --wordlist "21,22,23,80,443,3389" -o critical_ports.html
+```
+
+### 场景4: 渗透测试前的信息收集
+```bash
+# 全面的信息收集
+python main.py -t target.com -m subdomain,port,service,dir,vuln -o recon_report.html
+
+# 快速扫描，准备后续测试
+python main.py -t target.com -m subdomain,port --threads 200 -o quick_recon.html
+```
+
+### 场景5: 定期安全监控
+```bash
+# 创建目标列表文件
+echo "example1.com" > monitoring_targets.txt
+echo "example2.com" >> monitoring_targets.txt
+
+# 批量扫描
+python main.py -f monitoring_targets.txt -m ssl,vuln -o monthly_report.html
+
+# 关注证书过期
+python main.py -f ssl_targets.txt -m ssl -o cert_monitoring.html
+
+
+## GUI图形界面模式
+
+### 启动GUI
+```bash
+# 方式1: 使用main.py启动
+python main.py --gui
+
+# 方式2: 使用专用GUI脚本
+python gui.py
+
+# 指定端口
+python main.py --gui --gui-port 8080
+```
+
+### GUI操作步骤
+
+1. **打开浏览器访问**
+   - 自动打开: http://localhost:5000
+   - 或手动访问: http://localhost:5000
+
+2. **输入扫描目标**
+   - 在左侧"目标列表"文本框中输入域名或IP
+   - 每行一个目标
+   - 示例:
+     ```
+     example.com
+     192.168.1.1
+     test.example.com
+     ```
+
+3. **选择扫描模块**
+   - 勾选需要的扫描模块
+   - 或点击"全选"选择所有模块
+   - 使用"快速预设"快速加载常用配置:
+     - 信息收集: subdomain + dns + whois
+     - 安全评估: port + service + vuln + ssl
+     - 网络探测: port + service + network
+
+4. **设置扫描参数**
+   - 线程数: 默认30，可根据网络环境调整(1-200)
+   - 超时时间: 默认5秒，网络较差时可增加(1-300秒)
+
+5. **开始扫描**
+   - 点击"开始扫描"按钮
+   - 右侧显示实时进度条和当前扫描目标
+   - 可以查看每个目标的扫描状态
+
+6. **查看结果**
+   - 扫描过程中实时显示结果
+   - 按目标分组显示
+   - 不同模块的结果分类展示
+   - 漏洞和警告用不同颜色标识
+
+7. **下载报告**
+   - 扫描完成后显示"下载报告"按钮
+   - 点击下载HTML格式的详细报告
+   - 报告包含所有扫描结果和统计信息
+
+### GUI界面特点
+
+- **现代化界面**: 基于Bootstrap的响应式设计
+- **实时更新**: 使用WebSocket实时推送进度
+- **用户友好**: 直观的操作流程，无需记忆命令
+- **模块清晰**: 左侧配置，右侧结果，布局合理
+- **进度可视化**: 进度条显示整体进度
+- **结果高亮**: 重要信息用颜色区分
+- **移动适配**: 支持手机和平板访问
+
+### GUI vs 命令行对比
+
+| 特性 | GUI模式 | 命令行模式 |
+|------|---------|------------|
+| 易用性 | ⭐⭐⭐⭐⭐ 图形操作 | ⭐⭐⭐ 需要记忆命令 |
+| 实时性 | ⭐⭐⭐⭐⭐ 实时推送 | ⭐⭐⭐ 定期刷新 |
+| 交互性 | ⭐⭐⭐⭐⭐ 交互式 | ⭐⭐ 批处理 |
+| 可视化 | ⭐⭐⭐⭐⭐ 图表展示 | ⭐⭐ 文本输出 |
+| 远程访问 | ⭐⭐⭐⭐⭐ 浏览器访问 | ⭐⭐ SSH连接 |
+| 批量操作 | ⭐⭐⭐⭐ 列表输入 | ⭐⭐⭐⭐ 文件输入 |
+| 报告下载 | ⭐⭐⭐⭐ 一键下载 | ⭐⭐⭐ 命令生成 |
+
+### GUI高级功能
+
+1. **多目标扫描**
+   - 在目标列表中输入多个目标
+   - 系统自动并行处理
+   - 分别显示每个目标的结果
+
+2. **模块组合**
+   - 自由组合扫描模块
+   - 预设快速配置
+   - 保存常用组合
+
+3. **实时监控**
+   - 实时进度更新
+   - 当前目标显示
+   - 已完成/剩余统计
+
+4. **结果筛选**
+   - 按风险等级筛选
+   - 按模块类型筛选
+   - 按关键词搜索
+
+5. **报告导出**
+   - HTML格式报告
+   - 包含详细结果
+   - 可离线查看
+
+### GUI适用场景
+
+- **安全审计**: 定期对企业资产进行安全检查
+- **渗透测试**: 前期的信息收集阶段
+- **安全监控**: 监控重要资产的配置变化
+- **教育培训**: 安全培训课程演示
+- **应急响应**: 快速评估受影响资产
+
+### GUI使用技巧
+
+1. **快速开始**
+   ```bash
+   # 一键启动GUI和浏览器
+   python gui.py && start http://localhost:5000
+   ```
+
+2. **常用预设**
+   - 信息收集预设适合日常侦察
+   - 安全评估预设适合漏洞扫描
+   - 网络探测预设适合内网探测
+
+3. **性能调优**
+   - 内网扫描: 线程数可设置较高(100-200)
+   - 公网扫描: 线程数设置较低(10-30)
+   - 不稳定网络: 增加超时时间(10-15秒)
+
+4. **结果分析**
+   - 红色(Critical): 立即处理
+   - 橙色(High): 优先处理
+   - 黄色(Medium): 计划处理
+   - 蓝色(Low): 持续关注
+
+### GUI故障排除
+
+**问题1: 无法访问界面**
+- 检查端口是否被占用: `netstat -an | findstr 5000`
+- 更换端口启动: `python gui.py --port 8080`
+- 检查防火墙设置
+
+**问题2: 扫描没有响应**
+- 检查目标格式是否正确
+- 查看日志文件: `logs/`目录
+- 测试单个目标是否正常
+
+**问题3: 结果显示异常**
+- 刷新浏览器页面
+- 检查浏览器控制台错误
+- 尝试使用Chrome/Firefox
+
+**问题4: 报告下载失败**
+- 确保扫描已完成
+- 检查`reports/`目录权限
+- 手动访问下载链接
+
+```
+
+
+## 性能调优建议
+
+### 大规模扫描
+```bash
+# 1. 调整线程数（根据网络和系统性能）
+python main.py -t target.com -m all --threads 100
+
+# 2. 调整超时时间（网络环境较差时）
+python main.py -t target.com -m all --timeout 10
+
+# 3. 分阶段扫描（减少资源占用）
+python main.py -t target.com -m subdomain -o stage1.html
+python main.py -t target.com -m port,service -o stage2.html
+python main.py -t target.com -m vuln,ssl -o stage3.html
+```
+
+### 扫描策略
+1. **快速扫描**: 使用较少的线程和超时时间
+2. **深度扫描**: 使用更多线程和较长的超时时间
+3. **针对性扫描**: 只选择需要的模块
+4. **批量扫描**: 使用目标文件进行批量处理
+
+
+## 配置文件示例
+
+### 自定义配置 (custom_config.yaml)
+```yaml
+scan:
+  default_threads: 50
+  default_timeout: 10
+
+subdomain:
+  brute_force: true
+  search_engines: true
+  dns_servers:
+    - 8.8.8.8
+    - 1.1.1.1
+    - 9.9.9.9
+
+port:
+  top_ports: [21,22,23,25,53,80,110,135,139,143,443,993,995,1723,3306,3389,5432,5900,8080,8443]
+
+vulnerability:
+  scan_level: "high"
+  test_xss: true
+  test_sqli: true
+  test_command_injection: true
+
+report:
+  author: "安全团队"
+  company: "安全实验室"
+  include_recommendations: true
+```
+
+使用自定义配置:
+```bash
+python main.py -t target.com -m all --config custom_config.yaml
+```
+
+
+## 故障排除
+
+### 常见问题
+
+1. **端口扫描需要管理员权限**
+   - Linux/macOS: 使用 `sudo`
+   - Windows: 以管理员身份运行
+
+2. **网络连接问题**
+   - 检查网络连接
+   - 调整超时时间: `--timeout 10`
+   - 检查防火墙设置
+
+3. **内存占用过高**
+   - 减少线程数: `--threads 20`
+   - 分批扫描目标
+
+4. **API服务器无法访问**
+   - 检查端口是否被占用
+   - 检查防火墙设置
+   - 确认CORS配置（如果需要跨域访问）
+
+
+## 安全提示
+
+⚠️ **重要提醒**
+- 仅对授权目标进行扫描
+- 遵守当地法律法规
+- 尊重目标系统的性能和带宽
+- 不要在生产环境进行高风险测试
+- 妥善保管扫描结果
+
+
+## 更新和维护
+
+### 定期更新
+```bash
+# 更新工具
+git pull
+
+# 更新依赖
+pip install -r requirements.txt --upgrade
+```
+
+### 备份配置
+```bash
+# 备份配置文件
+cp config.yaml config.yaml.backup
+
+# 备份自定义字典
+cp data/subdomains.txt data/subdomains.txt.backup
+cp data/directory.txt data/directory.txt.backup
+```

@@ -1,0 +1,114 @@
+# 网络安全信息收集工具配置文件
+
+# 扫描设置
+scan:
+  default_threads: 30
+  default_timeout: 5
+  max_threads: 200
+  retry_count: 3
+  
+# 子域名扫描
+subdomain:
+  wordlist_file: "data/subdomains.txt"
+  brute_force: true
+  search_engines: true
+  certificate_transparency: true
+  dns_servers:
+    - 8.8.8.8
+    - 8.8.4.4
+    - 1.1.1.1
+    - 1.0.0.1
+  
+# 端口扫描
+port:
+  top_ports: [21, 22, 23, 25, 53, 80, 110, 135, 139, 143, 443, 993, 995, 1723, 3306, 3389, 5432, 5900, 8080, 8443]
+  common_ports: [80, 443, 8000, 8080, 8443, 8888]
+  all_ports: "1-65535"
+  scan_type: "syn"  # syn, tcp, udp
+  
+# 服务识别
+service:
+  banner_grabbing: true
+  service_detection: true
+  os_detection: false
+  version_detection: true
+  
+# WHOIS查询
+whois:
+  timeout: 10
+  use_cache: true
+  cache_ttl: 86400  # 24小时
+  
+# DNS记录
+dns:
+  record_types: ["A", "AAAA", "MX", "NS", "TXT", "CNAME", "SOA", "PTR"]
+  dns_servers:
+    - 8.8.8.8
+    - 8.8.4.4
+    - 1.1.1.1
+    - 1.0.0.1
+    
+# 目录扫描
+directory:
+  wordlist_file: "data/directory.txt"
+  extensions: [".php", ".asp", ".aspx", ".jsp", ".html", ".js", ".txt", ".bak"]
+  status_codes: [200, 204, 301, 302, 307, 403, 401]
+  recursive: false
+  recursion_depth: 2
+  
+# 漏洞检测
+vulnerability:
+  scan_level: "normal"  # low, normal, high, aggressive
+  test_injection: true
+  test_xss: true
+  test_sqli: true
+  test_command_injection: false
+  
+# SSL证书分析
+ssl:
+  check_expiry: true
+  check_cipher: true
+  check_certificate_chain: true
+  alert_days_before: 30
+  
+# 网络拓扑
+network:
+  traceroute: true
+  ping_sweep: false
+  os_fingerprinting: false
+  max_hops: 30
+  
+# API设置
+api:
+  enabled: true
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  cors_enabled: true
+  
+# 报告设置
+report:
+  template_dir: "templates"
+  include_charts: true
+  include_recommendations: true
+  author: "网络安全团队"
+  company: "安全实验室"
+  
+# 日志设置
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  file: "logs/recon-tool.log"
+  max_size: "10MB"
+  backup_count: 5
+  
+# 代理设置
+proxy:
+  enabled: false
+  http: ""
+  https: ""
+  
+# 用户代理
+user_agents:
+  - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+  - "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
+  - "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
